@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`stream-prelude > error messages match snapshots 1`] = `"Stream is in flowing mode with active data listeners. Pass { autoPause: true } or detach listeners."`;
+
+exports[`stream-prelude > error messages match snapshots 2`] = `"Prelude magic mismatch"`;
+
+exports[`stream-prelude > error messages match snapshots 3`] = `"Parsed headers must be a JSON object"`;
+
+exports[`stream-prelude > error messages match snapshots 4`] = `"Failed to parse JSON payload"`;
+
+exports[`stream-prelude > error messages match snapshots 5`] = `"Custom magic error"`;
+
+exports[`stream-prelude > error messages match snapshots 6`] = `"Custom flowing error"`;

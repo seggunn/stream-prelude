@@ -1,0 +1,49 @@
+{
+  "name": "stream-prelude",
+  "version": "0.1.2",
+  "description": "Frame and parse HTTP-style metadata as a binary prelude for streams.",
+  "type": "module",
+  "license": "MIT",
+  "repository": "https://github.com/seggunn/stream-prelude.git",
+  "author": {
+    "name": "seggunn",
+    "email": "seggunn@gmail.com"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "lint": "eslint .",
+    "format": "prettier -c .",
+    "format:fix": "prettier -w .",
+    "release:dry": "yarn build && npm pack",
+    "prepublishOnly": "yarn build"
+  },
+  "devDependencies": {
+    "@sxzz/eslint-config": "^7.2.5",
+    "@types/node": "^24.5.2",
+    "eslint": "^9.36.0",
+    "prettier": "^3.6.2",
+    "tsdown": "^0.15.4",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
