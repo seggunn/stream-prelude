@@ -5,6 +5,7 @@
   "type": "module",
   "license": "MIT",
   "repository": "https://github.com/seggunn/stream-prelude.git",
+  "npm": "https://www.npmjs.com/package/stream-prelude",
   "author": {
     "name": "seggunn",
     "email": "seggunn@gmail.com"
