@@ -1,5 +1,10 @@
 # stream-prelude
 
+[![npm version](https://img.shields.io/npm/v/stream-prelude.svg?style=flat-square)](https://www.npmjs.com/package/stream-prelude)
+[![npm downloads](https://img.shields.io/npm/dm/stream-prelude.svg?style=flat-square)](https://www.npmjs.com/package/stream-prelude)
+[![license](https://img.shields.io/npm/l/stream-prelude.svg?style=flat-square)](https://www.npmjs.com/package/stream-prelude)
+[![node](https://img.shields.io/node/v/stream-prelude.svg?style=flat-square)](https://www.npmjs.com/package/stream-prelude)
+
 Frame HTTP-style metadata in front of streaming bodies and recover it downstream. This package builds a tiny, dependency-free prelude that carries serialized headers before the actual payload so producers and consumers stay in sync without buffering the world.
 
 ## Installation
