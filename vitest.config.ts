@@ -18,9 +18,30 @@ export default defineConfig({
       // Treat other errors as unhandled
     },
 
-    // Other test configuration
+    // Test configuration
     globals: true,
     environment: 'node',
     testTimeout: 10000,
+
+    // Coverage configuration
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        'test/',
+        '**/*.d.ts',
+        '**/*.config.{js,ts}',
+      ],
+      thresholds: {
+        global: {
+          branches: 70,
+          functions: 80,
+          lines: 75,
+          statements: 75,
+        },
+      },
+    },
   },
 });

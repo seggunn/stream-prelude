@@ -9,44 +9,44 @@ export type JsonValue =
 
 export type MultipleMagic = string | Buffer | (string | Buffer)[];
 
-export interface FrameStreamOptions {
+export type FrameStreamOptions = {
   magic?: MultipleMagic;
   version?: number;
   maxJsonBytes?: number;
-}
+};
 
-export interface CommonHeaders {
+export type CommonHeaders = {
   contentType?: string;
   contentDisposition?: string;
   etag?: string;
   contentLength?: number;
-}
+};
 
-export type FrameStreamHeaders = CommonHeaders & { [key: string]: JsonValue };
+export type FrameStreamPrelude = CommonHeaders & { [key: string]: JsonValue };
 
-export interface ParsePreludeOptions {
+export type ParsePreludeOptions = {
   magic?: MultipleMagic;
   maxJsonBytes?: number;
   requirePrelude?: boolean;
-  onHeaders?: (headers: FramedHeaders) => void;
+  onPrelude?: (prelude: FramedPrelude) => void;
   autoPause?: boolean;
-}
+};
 
-export interface ParsePreludeResult {
-  headers: FramedHeaders;
+export type ParsePreludeResult = {
+  prelude: FramedPrelude;
   remainder: Readable;
-}
+};
 
-export type FramedHeaders = { v?: number } & FrameStreamHeaders &
+export type FramedPrelude = { v?: number } & FrameStreamPrelude &
   Record<string, unknown>;
 
-export interface EncodeOptions {
+export type EncodeOptions = {
   magic?: string | Buffer;
   version?: number;
   maxJsonBytes?: number;
-}
+};
 
-export interface DecodeOptions {
+export type DecodeOptions = {
   magic?: MultipleMagic;
   maxJsonBytes?: number;
-}
+};

@@ -18,13 +18,14 @@ import {
   isPlainObject,
   makePreludeBuffer,
   readExactly,
-  validateHeaders,
   validateJsonLength,
+  validatePrelude,
+  validateReadableStream,
 } from './utils';
 import type {
-  FramedHeaders,
-  FrameStreamHeaders,
+  FramedPrelude,
   FrameStreamOptions,
+  FrameStreamPrelude,
   MultipleMagic,
   ParsePreludeOptions,
   ParsePreludeResult,
@@ -33,14 +34,14 @@ import type {
 /**
  * Frames a readable stream with HTTP-style metadata as a binary prelude.
  *
- * This function prepends a binary prelude containing serialized headers to the source stream.
+ * This function prepends a binary prelude containing serialized prelude to the source stream.
  * The prelude format consists of: magic bytes (4 bytes) + JSON length (4 bytes) + JSON payload.
  *
  * @param source - The readable stream to frame
- * @param headers - JSON-serializable headers object describing the payload. The 'v' key is reserved for versioning.
+ * @param prelude - JSON-serializable prelude object describing the payload. The 'v' key is reserved for versioning.
  * @param opts - Optional configuration for framing behavior
  * @param opts.magic - Magic marker for prelude identification (default: 'PRE1')
- * @param opts.version - Version number included in headers as 'v' (default: 1)
+ * @param opts.version - Version number included in prelude as 'v' (default: 1)
  * @param opts.maxJsonBytes - Maximum size of JSON payload in bytes (default: 16384)
  * @returns A new readable stream that starts with the prelude followed by the original source content
  *
@@ -60,31 +61,33 @@ import type {
  */
 export function frameStream(
   source: Readable,
-  headers: FrameStreamHeaders,
+  prelude: FrameStreamPrelude,
   opts: FrameStreamOptions = {}
 ): Readable {
+  validateReadableStream(source);
+
   const magics = assertMagicList(opts.magic);
   const magic = magics[0]!; // assertMagicList always returns at least one Buffer
   const version = opts.version ?? 1;
   const maxJsonBytes = opts.maxJsonBytes ?? DEFAULT_MAX_JSON_BYTES;
 
-  validateHeaders(headers);
+  validatePrelude(prelude);
 
-  const payload = { v: version, ...headers };
+  const payload = { v: version, ...prelude };
 
   let jsonString: string;
   try {
     jsonString = JSON.stringify(payload);
   } catch {
-    throw new TypeError('headers must be JSON serializable');
+    throw new TypeError('prelude must be JSON serializable');
   }
 
   const jsonBuffer: Buffer = Buffer.from(jsonString, UTF8);
   validateJsonLength(jsonBuffer.length, maxJsonBytes);
-  const prelude: Buffer = makePreludeBuffer(magic, jsonBuffer);
+  const preludeBuffer: Buffer = makePreludeBuffer(magic, jsonBuffer);
 
   const framed = new PassThrough();
-  const wrote = framed.write(prelude);
+  const wrote = framed.write(preludeBuffer);
 
   const onError = (error: Error) => framed.destroy(error);
   source.once('error', onError);
@@ -197,9 +200,9 @@ function _createPassThroughRemainderWithBytes(
  * @param opts.magic - Expected magic marker(s). Can be string, Buffer, or array of either
  * @param opts.maxJsonBytes - Maximum size of JSON payload in bytes (default: 16384)
  * @param opts.requirePrelude - Throw on missing/mismatched magic instead of falling back
- * @param opts.onHeaders - Callback invoked with parsed headers before streaming body
+ * @param opts.onPrelude - Callback invoked with parsed prelude before streaming body
  * @param opts.autoPause - Pause flowing streams instead of throwing
- * @returns Promise resolving to headers object and remainder stream
+ * @returns Promise resolving to prelude object and remainder stream
  *
  * @example
  * ```ts
@@ -220,6 +223,8 @@ export async function parsePrelude(
   source: Readable,
   opts: ParsePreludeOptions = {}
 ): Promise<ParsePreludeResult> {
+  validateReadableStream(source);
+
   const magics = assertMagicList(opts.magic);
   const maxJsonBytes = opts.maxJsonBytes ?? DEFAULT_MAX_JSON_BYTES;
 
@@ -245,8 +250,8 @@ export async function parsePrelude(
       const remainder =
         _tryUnshiftRemainderWithBytes(source, receivedMagic) ||
         _createPassThroughRemainderWithBytes(source, receivedMagic);
-      const headers: FramedHeaders = {};
-      return { headers, remainder };
+      const prelude: FramedPrelude = {};
+      return { prelude, remainder };
     }
 
     const lengthBuffer = await readExactly(source, LENGTH_BYTES);
@@ -266,10 +271,10 @@ export async function parsePrelude(
       throw new PreludeInvalidTypeError();
     }
 
-    const headers = parsed as FramedHeaders;
-    if (opts.onHeaders) {
+    const headers = parsed as FramedPrelude;
+    if (opts.onPrelude) {
       try {
-        opts.onHeaders(headers);
+        opts.onPrelude(headers);
       } catch {
         // Ignore callback errors
       }
@@ -280,7 +285,7 @@ export async function parsePrelude(
     const remainder =
       _tryUnshiftRemainder(source) || _createPassThroughRemainder(source);
 
-    return { headers, remainder };
+    return { prelude: headers, remainder };
   } catch (error) {
     source.destroy(error as Error);
     throw error;
@@ -288,15 +293,15 @@ export async function parsePrelude(
 }
 
 /**
- * Encodes headers into a binary prelude buffer without requiring a stream.
+ * Encodes prelude into a binary prelude buffer without requiring a stream.
  *
  * Creates a standalone prelude buffer that can be prepended to data. The prelude format
  * consists of: magic bytes (4 bytes) + JSON length (4 bytes) + JSON payload.
  *
- * @param headers - JSON-serializable headers object. The 'v' key is reserved for versioning.
+ * @param prelude - JSON-serializable prelude object. The 'v' key is reserved for versioning.
  * @param opts - Optional configuration for encoding behavior
  * @param opts.magic - Magic marker for prelude identification (default: 'PRE1')
- * @param opts.version - Version number included in headers as 'v' (default: 1)
+ * @param opts.version - Version number included in prelude as 'v' (default: 1)
  * @param opts.maxJsonBytes - Maximum size of JSON payload in bytes (default: 16384)
  * @returns Buffer containing the complete prelude ready to prepend to data
  *
@@ -304,23 +309,23 @@ export async function parsePrelude(
  * ```ts
  * import { encodePrelude } from 'stream-prelude';
  *
- * const headers = {
+ * const prelude = {
  *   contentType: 'application/pdf',
  *   contentDisposition: 'attachment; filename="doc.pdf"'
  * };
  *
- * const prelude = encodePrelude(headers);
- * const totalSize = prelude.length + pdfBuffer.length;
+ * const preludeBuffer = encodePrelude(prelude);
+ * const totalSize = preludeBuffer.length + pdfBuffer.length;
  *
  * // Use in HTTP response
  * response.setHeader('Content-Length', totalSize);
- * response.write(prelude);
+ * response.write(preludeBuffer);
  * response.write(pdfBuffer);
  * response.end();
  * ```
  */
 export function encodePrelude(
-  headers: FrameStreamHeaders,
+  prelude: FrameStreamPrelude,
   opts: {
     magic?: string | Buffer;
     version?: number;
@@ -331,24 +336,24 @@ export function encodePrelude(
   const magic = magics[0]!; // assertMagicList always returns at least one Buffer
   const version = opts.version ?? 1;
   const maxJsonBytes = opts.maxJsonBytes ?? DEFAULT_MAX_JSON_BYTES;
-  validateHeaders(headers);
-  const jsonString = JSON.stringify({ v: version, ...headers });
+  validatePrelude(prelude);
+  const jsonString = JSON.stringify({ v: version, ...prelude });
   const jsonBuffer = Buffer.from(jsonString, UTF8);
   validateJsonLength(jsonBuffer.length, maxJsonBytes);
   return makePreludeBuffer(magic, jsonBuffer);
 }
 
 /**
- * Decodes a binary prelude buffer and extracts the embedded headers.
+ * Decodes a binary prelude buffer and extracts the embedded prelude.
  *
  * Parses a complete prelude buffer containing magic bytes, length, and JSON payload.
- * Returns the parsed headers and the offset where the actual data begins.
+ * Returns the parsed prelude and the offset where the actual data begins.
  *
  * @param buffer - Buffer containing the prelude followed by data
  * @param opts - Optional configuration for decoding behavior
  * @param opts.magic - Expected magic marker(s). Can be string, Buffer, or array of either
  * @param opts.maxJsonBytes - Maximum size of JSON payload in bytes (default: 16384)
- * @returns Object containing parsed headers and byte offset to data
+ * @returns Object containing parsed prelude and byte offset to data
  * @throws {PreludeTruncatedError} If buffer is too small for complete prelude
  * @throws {PreludeMagicMismatchError} If magic bytes don't match expected values
  * @throws {PreludeJsonParseError} If JSON payload cannot be parsed
@@ -359,16 +364,16 @@ export function encodePrelude(
  * import { decodePrelude } from 'stream-prelude';
  *
  * const buffer = Buffer.concat([preludeBuffer, dataBuffer]);
- * const { headers, offset } = decodePrelude(buffer);
+ * const { prelude, offset } = decodePrelude(buffer);
  *
- * console.log('Content-Type:', headers.contentType);
+ * console.log('Content-Type:', prelude.contentType);
  * const actualData = buffer.subarray(offset);
  * ```
  */
 export function decodePrelude(
   buffer: Buffer,
   opts: { magic?: MultipleMagic; maxJsonBytes?: number } = {}
-): { headers: Record<string, unknown>; offset: number } {
+): { prelude: Record<string, unknown>; offset: number } {
   const magics = assertMagicList(opts.magic);
   const maxJsonBytes = opts.maxJsonBytes ?? DEFAULT_MAX_JSON_BYTES;
   if (buffer.length < MAGIC_LENGTH + LENGTH_BYTES) {
@@ -394,16 +399,16 @@ export function decodePrelude(
   if (!isPlainObject(parsed)) {
     throw new PreludeInvalidTypeError();
   }
-  return { headers: parsed as Record<string, unknown>, offset: end };
+  return { prelude: parsed as Record<string, unknown>, offset: end };
 }
 
 /**
- * Calculates the total size in bytes of a prelude for the given headers.
+ * Calculates the total size in bytes of a prelude for the given prelude.
  *
  * This is useful for setting HTTP Content-Length headers when serving framed streams.
  * The prelude size includes: magic bytes + length field (4 bytes) + JSON payload.
  *
- * @param headers - Headers object to calculate size for
+ * @param prelude - Prelude object to calculate size for
  * @param opts - Optional configuration for size calculation
  * @param opts.magic - Magic marker (affects size if custom length)
  * @param opts.version - Version number (included in JSON)
@@ -414,12 +419,12 @@ export function decodePrelude(
  * ```ts
  * import { getPreludeSize } from 'stream-prelude';
  *
- * const headers = {
+ * const prelude = {
  *   contentType: 'application/pdf',
  *   contentDisposition: 'attachment; filename="doc.pdf"'
  * };
  *
- * const preludeSize = getPreludeSize(headers);
+ * const preludeSize = getPreludeSize(prelude);
  * const bodySize = getFileSize('doc.pdf');
  * const totalSize = preludeSize + bodySize;
  *
@@ -427,7 +432,7 @@ export function decodePrelude(
  * ```
  */
 export function getPreludeSize(
-  headers: FrameStreamHeaders,
+  prelude: FrameStreamPrelude,
   opts: {
     magic?: string | Buffer;
     version?: number;
@@ -438,8 +443,8 @@ export function getPreludeSize(
   const magic = magics[0]!; // assertMagicList always returns at least one Buffer
   const version = opts.version ?? 1;
   const maxJsonBytes = opts.maxJsonBytes ?? DEFAULT_MAX_JSON_BYTES;
-  validateHeaders(headers);
-  const jsonString = JSON.stringify({ v: version, ...headers });
+  validatePrelude(prelude);
+  const jsonString = JSON.stringify({ v: version, ...prelude });
   const jsonLength = Buffer.byteLength(jsonString, UTF8);
   validateJsonLength(jsonLength, maxJsonBytes);
   return magic.length + LENGTH_BYTES + jsonLength;
@@ -477,6 +482,8 @@ export async function isFramedStream(
   source: Readable,
   opts: { magic?: MultipleMagic } = {}
 ): Promise<boolean> {
+  validateReadableStream(source);
+
   const magics = assertMagicList(opts.magic);
   if (source.readableFlowing === true && source.listenerCount('data') > 0) {
     // avoid interfering with existing consumers

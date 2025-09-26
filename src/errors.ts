@@ -42,3 +42,10 @@ export class PreludeFlowingModeError extends Error {
     this.name = 'PreludeFlowingModeError';
   }
 }
+
+export class PreludeInvalidStreamError extends Error {
+  constructor(message = 'Source must be a readable stream') {
+    super(message);
+    this.name = 'PreludeInvalidStreamError';
+  }
+}

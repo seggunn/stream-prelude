@@ -1,11 +1,12 @@
 import { Buffer } from 'node:buffer';
 import { DEFAULT_MAGIC, LENGTH_BYTES, MAGIC_LENGTH, UTF8 } from './constants';
 import {
+  PreludeInvalidStreamError,
   PreludeJsonParseError,
   PreludeJsonTooLargeError,
   PreludeTruncatedError,
 } from './errors';
-import type { FrameStreamHeaders, JsonValue, MultipleMagic } from './types';
+import type { FrameStreamPrelude, JsonValue, MultipleMagic } from './types';
 import type { Readable } from 'node:stream';
 
 function assertMagic(magic: string | Buffer): Buffer {
@@ -63,20 +64,20 @@ export function assertSerializable(value: JsonValue, path: string): void {
   throw new TypeError(`${path} contains a non-serializable value`);
 }
 
-export function validateHeaders(headers: FrameStreamHeaders): void {
-  if (!isPlainObject(headers)) {
-    throw new TypeError('headers must be a plain object');
+export function validatePrelude(prelude: FrameStreamPrelude): void {
+  if (!isPlainObject(prelude)) {
+    throw new TypeError('prelude must be a plain object');
   }
 
-  if (Object.prototype.hasOwnProperty.call(headers, 'v')) {
-    throw new TypeError('headers must not declare the reserved key "v"');
+  if (Object.prototype.hasOwnProperty.call(prelude, 'v')) {
+    throw new TypeError('prelude must not declare the reserved key "v"');
   }
 
-  for (const [key, value] of Object.entries(headers)) {
+  for (const [key, value] of Object.entries(prelude)) {
     if (value === undefined) {
-      throw new TypeError(`headers.${key} is undefined`);
+      throw new TypeError(`prelude.${key} is undefined`);
     }
-    assertSerializable(value as JsonValue, `headers.${key}`);
+    assertSerializable(value as JsonValue, `prelude.${key}`);
   }
 }
 
@@ -167,4 +168,36 @@ export async function readExactly(
   }
 
   return Buffer.concat(buffers, collected);
+}
+
+export function validateReadableStream(
+  stream: unknown
+): asserts stream is Readable {
+  if (stream === null || stream === undefined) {
+    throw new PreludeInvalidStreamError('Source cannot be null or undefined');
+  }
+
+  if (typeof stream !== 'object') {
+    throw new PreludeInvalidStreamError('Source must be an object');
+  }
+
+  // Check if it's a Readable stream by looking for readable stream properties
+  const candidate = stream as Record<string, unknown>;
+
+  if (typeof candidate.pipe !== 'function') {
+    throw new PreludeInvalidStreamError('Source must be a readable stream');
+  }
+
+  if (typeof candidate.on !== 'function') {
+    throw new PreludeInvalidStreamError('Source must be an event emitter');
+  }
+
+  // Check for readable stream specific properties
+  if (!('readable' in candidate) || typeof candidate.readable !== 'boolean') {
+    throw new PreludeInvalidStreamError('Source must be a readable stream');
+  }
+
+  if (!('destroy' in candidate) || typeof candidate.destroy !== 'function') {
+    throw new PreludeInvalidStreamError('Source must be a readable stream');
+  }
 }
