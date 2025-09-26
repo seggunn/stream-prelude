@@ -18,18 +18,6 @@ yarn add stream-prelude
 npm install stream-prelude
 ```
 
-### From GitHub Packages
-
-```bash
-# Using npm
-npm install @seggunn/stream-prelude
-
-# Using yarn
-yarn add @seggunn/stream-prelude
-```
-
-**Note**: GitHub Packages requires authentication. See [GitHub Packages documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry) for setup instructions.
-
 ## Usage (Node >= 20)
 
 stream-prelude allows you to frame HTTP-style metadata in front of streaming data and recover it downstream. This is particularly useful for:
@@ -829,7 +817,7 @@ Please be respectful and constructive when participating in discussions. We foll
 
 ### Automated Publishing
 
-This project uses automated publishing to both **npm** and **GitHub Packages** via GitHub Actions. Here's how releases work:
+This project uses automated publishing to **npm** via GitHub Actions. Here's how releases work:
 
 #### Creating a Release
 
@@ -843,8 +831,7 @@ This project uses automated publishing to both **npm** and **GitHub Packages** v
    - Build the project
    - Run all tests and checks
    - Publish to **npm** with provenance
-   - Publish to **GitHub Packages**
-   - Make packages publicly available on both registries
+   - Make package publicly available on npm registry
 
 #### Release Requirements
 
