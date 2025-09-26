@@ -1,6 +1,6 @@
 {
   "name": "stream-prelude",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Frame and parse HTTP-style metadata as a binary prelude for streams.",
   "type": "module",
   "license": "MIT",
