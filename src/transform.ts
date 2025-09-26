@@ -8,30 +8,30 @@ import {
 } from './constants';
 import { PreludeInvalidTypeError, PreludeJsonParseError } from './errors';
 import { assertMagicList, isPlainObject, validateJsonLength } from './utils';
-import type { FramedHeaders, ParsePreludeOptions } from './types';
+import type { FramedPrelude, ParsePreludeOptions } from './types';
 
 /**
  * Creates a Transform stream that parses prelude headers and emits them as events.
  *
- * This transform stream reads the prelude from incoming data, emits a 'headers' event
- * with the parsed headers, then passes through the remaining data unchanged. It's useful
+ * This transform stream reads the prelude from incoming data, emits a 'prelude' event
+ * with the parsed prelude, then passes through the remaining data unchanged. It's useful
  * for integrating prelude parsing into existing stream pipelines.
  *
  * @param opts - Optional configuration for parsing behavior
  * @param opts.magic - Expected magic marker(s). Can be string, Buffer, or array of either
  * @param opts.maxJsonBytes - Maximum size of JSON payload in bytes (default: 16384)
  * @param opts.requirePrelude - Throw on missing/mismatched magic instead of falling back
- * @param opts.onHeaders - Callback invoked with parsed headers before streaming body
+ * @param opts.onPrelude - Callback invoked with parsed prelude before streaming body
  * @param opts.autoPause - Pause flowing streams instead of throwing
- * @returns Transform stream that emits 'headers' event and passes through body data
+ * @returns Transform stream that emits 'prelude' event and passes through body data
  *
  * @example
  * ```ts
  * import { parsePreludeTransform } from 'stream-prelude';
  *
  * const transform = parsePreludeTransform();
- * transform.once('headers', (headers) => {
- *   console.log('Content-Type:', headers.contentType);
+ * transform.once('prelude', (prelude) => {
+ *   console.log('Content-Type:', prelude.contentType);
  *   // Set response headers here
  * });
  *
@@ -93,7 +93,7 @@ export function parsePreludeTransform(
               ) as unknown as Buffer<ArrayBufferLike>;
               if (!magics.some((m) => slice.equals(m))) {
                 // no prelude: push back slice and all buffer, switch to body
-                this.emit('headers', {} as FramedHeaders);
+                this.emit('prelude', {} as FramedPrelude);
                 this.push(slice);
                 if (buffer.length) this.push(buffer);
                 stage = 'body';
@@ -132,7 +132,7 @@ export function parsePreludeTransform(
               if (!isPlainObject(parsed)) {
                 throw new PreludeInvalidTypeError();
               }
-              this.emit('headers', parsed as FramedHeaders);
+              this.emit('prelude', parsed as FramedPrelude);
               stage = 'body';
               needed = 0;
               break;

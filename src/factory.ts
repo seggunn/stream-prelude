@@ -1,7 +1,7 @@
 import { frameStream, parsePrelude } from './api';
 import type {
-  FrameStreamHeaders,
   FrameStreamOptions,
+  FrameStreamPrelude,
   ParsePreludeOptions,
 } from './types';
 import type { Readable } from 'node:stream';
@@ -10,7 +10,7 @@ import type { Readable } from 'node:stream';
  * Creates a reusable framer function with pre-configured options.
  *
  * Useful for creating specialized framers with consistent settings across
- * your application, such as custom magic bytes or default headers.
+ * your application, such as custom magic bytes or default prelude.
  *
  * @param defaults - Default options to apply to all framed streams
  * @returns Function that frames streams with the pre-configured options
@@ -34,9 +34,9 @@ import type { Readable } from 'node:stream';
 export function createFramer(defaults: FrameStreamOptions = {}) {
   return (
     source: Readable,
-    headers: FrameStreamHeaders,
+    prelude: FrameStreamPrelude,
     opts: FrameStreamOptions = {}
-  ) => frameStream(source, headers, { ...defaults, ...opts });
+  ) => frameStream(source, prelude, { ...defaults, ...opts });
 }
 
 /**

@@ -8,5 +8,8 @@ export default sxzz(
   },
   [
     // Custom rules can be added here if needed
+    {
+      ignores: ['README.md'],
+    },
   ]
 );

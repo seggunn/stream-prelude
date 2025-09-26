@@ -1,6 +1,6 @@
 {
   "name": "stream-prelude",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Frame and parse HTTP-style metadata as a binary prelude for streams.",
   "type": "module",
   "license": "MIT",
@@ -29,6 +29,8 @@
     "build": "tsdown",
     "test": "vitest",
     "test:watch": "vitest watch",
+    "test:coverage": "vitest --coverage",
+    "test:coverage:watch": "vitest --coverage --watch",
     "lint": "eslint .",
     "format": "prettier -c .",
     "format:fix": "prettier -w .",
@@ -38,6 +40,7 @@
   "devDependencies": {
     "@sxzz/eslint-config": "^7.2.5",
     "@types/node": "^24.5.2",
+    "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.36.0",
     "prettier": "^3.6.2",
     "tsdown": "^0.15.4",
